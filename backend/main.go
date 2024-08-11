@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -69,4 +70,29 @@ func jsonContentTypeMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Content-Type", "application/json")
 		next.ServeHTTP(w, r)
 	})
+}
+
+// get all users
+func getUsers(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		rows, err := db.Query("SELECT * FROM users")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer rows.Close()
+
+		users := []User{} // array of users
+		for rows.Next() {
+			var u User
+			if err := rows.Scan(&u.Id, &u.Name, &u.Email); err != nil {
+				log.Fatal(err)
+			}
+			users = append(users, u)
+		}
+		if err := rows.Err(); err != nil {
+			log.Fatal(err)
+		}
+
+		json.NewEncoder(w).Encode(users)
+	}
 }
